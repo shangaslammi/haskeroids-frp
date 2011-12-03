@@ -6,9 +6,13 @@ import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
 
-import Haskeroids.Keyboard
+import qualified Haskeroids.Controls as Controls
+import Haskeroids.Asteroid
+import Haskeroids.Collision
 import Haskeroids.Geometry
 import Haskeroids.Geometry.Body
+import Haskeroids.Keyboard
+import Haskeroids.Player
 
 type RenderFunc = Float -> [LineSegment]
 
@@ -16,6 +20,39 @@ game :: Coroutine Keyboard RenderFunc
 game = undefined
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
+
+player :: Vec2 -> Coroutine (Keyboard, [Asteroid]) Player
+player ipos = proc (kb, asteroids) -> do
+    thrust <- arr kbThrust -< kb
+    turn   <- arr kbTurn   -< kb
+
+    rec pbody   <- body initialBody 0.96
+                -< accEv ++ [SetRotation turn]
+
+        accEv   <- mapE accelerate
+                <<< watch ((>0).fst)
+                -< (thrust, prevAngle pbody)
+
+    rec let collision = any (collides pl) asteroids
+        prev  <- delay initialPlayer -< pl
+        alive <- scan (&&) True      -< not collision
+        let pl = Player pbody alive Nothing 0
+
+    returnA -< pl where
+
+        initialBody   = initBody ipos 0 (0,0) 0
+        initialPlayer = Player initialBody True Nothing 0
+
+        kbThrust kb
+            | isKeyDown kb Controls.thrust = 0.7
+            | otherwise                    = 0.0
+
+        kbTurn kb
+            | isKeyDown kb Controls.turnLeft  = -0.18
+            | isKeyDown kb Controls.turnRight =  0.18
+            | otherwise                       =  0.00
+
+        accelerate (thrust, angle) = Accelerate $ polar thrust angle
 
 body :: Body -> Float -> Coroutine (Event BodyEvent) Body
 body (Body ipos iangle ivel irot _ _) fric = proc ev -> do
