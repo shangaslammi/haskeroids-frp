@@ -14,6 +14,7 @@ import Haskeroids.Render (LineRenderable(..))
 import Haskeroids.Keyboard
 import Haskeroids.State
 import Haskeroids.Text.Font
+import Haskeroids.Game
 
 type KeyboardRef = IORef Keyboard
 type TimeRef     = IORef POSIXTime
