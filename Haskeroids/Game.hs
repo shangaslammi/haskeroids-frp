@@ -9,6 +9,7 @@ import Data.List (foldl')
 
 import qualified Haskeroids.Controls as Controls
 import Haskeroids.Asteroid
+import Haskeroids.Bullet
 import Haskeroids.Collision
 import Haskeroids.Geometry
 import Haskeroids.Geometry.Body
@@ -22,13 +23,13 @@ type GameCoroutine = Coroutine Keyboard RenderFunc
 
 game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
-    pl <- player (400,300) -< (kb, [])
+    (pl, be) <- player (400,300) -< (kb, [])
 
     returnA -< flip interpolatedLines pl
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 
-player :: Vec2 -> Coroutine (Keyboard, [Asteroid]) Player
+player :: Vec2 -> Coroutine (Keyboard, [Asteroid]) (Player, Event Bullet)
 player ipos = proc (kb, asteroids) -> do
     thrust <- arr kbThrust -< kb
     turn   <- arr kbTurn   -< kb
@@ -45,10 +46,21 @@ player ipos = proc (kb, asteroids) -> do
         alive <- scan (&&) True      -< not collision
         let pl = Player pbody alive Nothing 0
 
-    returnA -< pl where
+    rec bullets <- mapE fireBullet
+                <<< watch shouldShoot
+                -< (rof, pbody, kb)
+        rof <- delay 0 <<< scan tickROF 0 -< bullets
+
+    returnA -< (pl, bullets) where
 
         initialBody   = initBody ipos 0 (0,0) 0
         initialPlayer = Player initialBody True Nothing 0
+
+        shouldShoot (rof, _, kb) = rof <= 0 && isKeyDown kb Controls.shoot
+        fireBullet (_, body, _)  = initBullet (bodyPos body) (bodyAngle body)
+        tickROF rof ev
+            | null ev   = rof-1
+            | otherwise = 5
 
         kbThrust kb
             | isKeyDown kb Controls.thrust = 0.7
