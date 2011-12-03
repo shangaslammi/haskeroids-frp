@@ -6,6 +6,7 @@ import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
 import Control.Coroutine.FRP.Collections
+import Control.Monad (replicateM)
 import Data.List (foldl')
 
 import qualified Haskeroids.Controls as Controls
@@ -16,24 +17,47 @@ import Haskeroids.Geometry
 import Haskeroids.Geometry.Body
 import Haskeroids.Keyboard
 import Haskeroids.Player
+import Haskeroids.Random
 import Haskeroids.Render
 
 type RenderFunc    = Float -> [LineSegment]
 type GameCoroutine = Coroutine Keyboard RenderFunc
 
+randomize :: RandomGen -> Coroutine (Random a) a
+randomize gen = Coroutine $ \ra ->
+    let (a, gen') = runRandom ra gen
+    in (a, randomize gen')
 
 game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-    bullets <- collection [] <<< second (mapE bullet) -< ((),be)
+    bullets   <- collection [] <<< second (mapE bullet) -< ((),be)
+
+    newAsteroids <- mapC (randomize asGen) <<< onceE initialAsteroids -< ()
+
+    asteroids   <- collection []
+                <<< second (mapE asteroid)
+                -< ((),newAsteroids)
 
     returnA -< \i ->
-        interpolatedLines i pl ++ concatMap (interpolatedLines i) bullets
+        interpolatedLines i pl
+            ++ concatMap (interpolatedLines i) bullets
+            ++ concatMap (interpolatedLines i) asteroids
+
+    where
+        initialAsteroids = replicate 3 genInitialAsteroid
+        asGen = initRandomGen 123
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 
-bullet :: Bullet -> Coroutine () (Maybe Bullet)
+asteroid :: Asteroid -> Item () Asteroid
+asteroid (Asteroid sz ibody hits lns) = proc () -> do
+    asbody <- body ibody 1.0 -< []
+
+    returnA -< (Just $ Asteroid sz asbody hits lns)
+
+bullet :: Bullet -> Item () Bullet
 bullet (Bullet ilife ibody) = proc () -> do
     bbody <- body ibody 1.0  -< []
     blife <- integrate ilife -< -1

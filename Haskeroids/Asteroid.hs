@@ -1,5 +1,5 @@
 module Haskeroids.Asteroid
-    ( Asteroid
+    ( Asteroid(..)
     , RandomAsteroid
     , Size(..)
     , genInitialAsteroid
