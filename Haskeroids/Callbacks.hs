@@ -4,13 +4,15 @@ module Haskeroids.Callbacks
     , handleKeyboard
     ) where
 
+import Control.Coroutine
+
 import Data.IORef
 import Data.Time.Clock.POSIX
 
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLUT
 
-import Haskeroids.Render (LineRenderable(..))
+import Haskeroids.Render
 import Haskeroids.Keyboard
 import Haskeroids.State
 import Haskeroids.Text.Font
@@ -18,7 +20,7 @@ import Haskeroids.Game
 
 type KeyboardRef = IORef Keyboard
 type TimeRef     = IORef POSIXTime
-type StateRef    = IORef GameState
+type StateRef    = IORef (RenderFunc, GameCoroutine)
 type AccumRef    = TimeRef
 type PrevTimeRef = TimeRef
 
@@ -28,7 +30,7 @@ secPerFrame :: Fractional a => a
 secPerFrame = 0.0333
 
 maxFrameTime :: Fractional a => a
-maxFrameTime = 0.1
+maxFrameTime = secPerFrame
 
 -- | Initialize a new group of callback references
 initCallbackRefs :: IO CallbackRefs
@@ -36,7 +38,8 @@ initCallbackRefs = do
     accum <- newIORef secPerFrame
     prev  <- getPOSIXTime >>= newIORef
     keyb  <- newIORef initKeyboard
-    st    <- loadFont "font.txt" >>= newIORef . initialGameState
+    st    <- newIORef (undefined, game)
+    -- st    <- loadFont "font.txt" >>= newIORef . initialGameState
     return (accum, prev, keyb, st)
 
 -- | Run the game logic, render the view and swap display buffers
@@ -47,9 +50,9 @@ renderViewport (ar, pr, kb, sr) = do
     prev    <- readIORef pr
     keys    <- readIORef kb
 
-    let consumeAccum acc s
+    let consumeAccum acc s@(_, co)
             | acc >= secPerFrame =
-                consumeAccum (acc - secPerFrame) $ tickState keys s
+                consumeAccum (acc - secPerFrame) $ runC co keys
             | otherwise = (acc, s)
 
         frameTime = min (current - prev) maxFrameTime
@@ -63,7 +66,8 @@ renderViewport (ar, pr, kb, sr) = do
     clear [ColorBuffer]
 
     let interpolation = realToFrac $ accum' / secPerFrame
-    renderInterpolated interpolation s'
+    renderLines $ (fst s') interpolation
+    -- renderInterpolated interpolation s'
 
     swapBuffers
     postRedisplay Nothing

@@ -1,5 +1,5 @@
 
-module Haskeroids.Render (LineRenderable(..)) where
+module Haskeroids.Render (LineRenderable(..), renderLines) where
 
 import Graphics.Rendering.OpenGL
 import Haskeroids.Geometry

@@ -5,6 +5,7 @@ import Control.Applicative
 import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
+import Data.List (foldl')
 
 import qualified Haskeroids.Controls as Controls
 import Haskeroids.Asteroid
@@ -13,11 +14,17 @@ import Haskeroids.Geometry
 import Haskeroids.Geometry.Body
 import Haskeroids.Keyboard
 import Haskeroids.Player
+import Haskeroids.Render
 
-type RenderFunc = Float -> [LineSegment]
+type RenderFunc    = Float -> [LineSegment]
+type GameCoroutine = Coroutine Keyboard RenderFunc
+
 
 game :: Coroutine Keyboard RenderFunc
-game = undefined
+game = proc kb -> do
+    pl <- player (400,300) -< (kb, [])
+
+    returnA -< flip interpolatedLines pl
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 
@@ -33,7 +40,7 @@ player ipos = proc (kb, asteroids) -> do
                 <<< watch ((>0).fst)
                 -< (thrust, prevAngle pbody)
 
-    rec let collision = any (collides pl) asteroids
+    rec let collision = any (collides prev) asteroids
         prev  <- delay initialPlayer -< pl
         alive <- scan (&&) True      -< not collision
         let pl = Player pbody alive Nothing 0
@@ -56,7 +63,7 @@ player ipos = proc (kb, asteroids) -> do
 
 body :: Body -> Float -> Coroutine (Event BodyEvent) Body
 body (Body ipos iangle ivel irot _ _) fric = proc ev -> do
-    (vel, rot)  <- scanE processEvents (ivel, irot) -< ev
+    (vel, rot)  <- scan processEvents (ivel, irot) -< ev
 
     angle       <- integrate iangle         -< rot
     (pos, prev) <- scan tickPos (ipos,ipos) -< vel
@@ -64,12 +71,15 @@ body (Body ipos iangle ivel irot _ _) fric = proc ev -> do
 
     returnA -< Body pos angle vel rot prev prevAngle where
 
-        processEvents (v,r) ev = case ev of
-            Accelerate a  -> (v /+/ a, r)
-            SetRotation r -> (v, r)
+        processEvents (v,r) ev = (v' /* fric, r') where
+            (v', r') = foldl' step (v, r) ev
+
+            step (v,r) ev = case ev of
+                Accelerate a  -> (v /+/ a, r)
+                SetRotation r -> (v, r)
 
         tickPos (pos,_) vel = (newPos, prevPos) where
             prevPos = pos  /+/ wrap
             newPos  = pos' /+/ wrap
-            pos'    = (pos /+/ vel) /* fric
+            pos'    = pos /+/ vel
             wrap    = wrapper pos'
