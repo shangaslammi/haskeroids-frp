@@ -1,8 +1,5 @@
-== Haskeroids: A simple game project in Haskell and OpenGL
+## Haskeroids-FRP
 
-Haskeroids is a game project imitating the classic Asteroids game, written in
-Haskell. I'm writing it in order to learn more about Haskell, especially in
-game programming context, and the code will be accompanied by a series of
-write-ups that detail my experiences in a sort of tutorial format.
+This is a version of [Haskeroids](https://github.com/shangaslammi/haskeroids) modified to use the [coroutine-frp](https://github.com/shangaslammi/coroutine-frp) AFRP library for its game logic. The aim is to compare the implementation effort and performance of game logic based on reactive arrows and a traditional model using the State monad.
 
-See the wiki for more details: https://github.com/shangaslammi/haskeroids/wiki
+The conversion to AFRP is still a work in progress.
