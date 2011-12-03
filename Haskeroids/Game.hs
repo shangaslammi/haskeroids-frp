@@ -5,6 +5,7 @@ import Control.Applicative
 import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
+import Control.Coroutine.FRP.Collections
 import Data.List (foldl')
 
 import qualified Haskeroids.Controls as Controls
@@ -25,7 +26,10 @@ game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-    returnA -< flip interpolatedLines pl
+    bullets <- collection [] <<< second (mapE bullet) -< ((),be)
+
+    returnA -< \i ->
+        interpolatedLines i pl ++ concatMap (interpolatedLines i) bullets
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 
