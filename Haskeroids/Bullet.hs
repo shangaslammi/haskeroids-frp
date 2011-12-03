@@ -1,6 +1,6 @@
 
 module Haskeroids.Bullet
-    ( Bullet
+    ( Bullet(..)
     , initBullet
     , updateBullets
     ) where

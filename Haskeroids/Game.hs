@@ -29,6 +29,15 @@ game = proc kb -> do
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 
+bullet :: Bullet -> Coroutine () (Maybe Bullet)
+bullet (Bullet ilife ibody) = proc () -> do
+    bbody <- body ibody 1.0  -< []
+    blife <- integrate ilife -< -1
+
+    if blife > 0
+        then returnA -< (Just $ Bullet blife bbody)
+        else returnA -< Nothing
+
 player :: Vec2 -> Coroutine (Keyboard, [Asteroid]) (Player, Event Bullet)
 player ipos = proc (kb, asteroids) -> do
     thrust <- arr kbThrust -< kb
