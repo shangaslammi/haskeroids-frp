@@ -32,13 +32,16 @@ game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-    bullets   <- collection [] <<< second (mapE bullet) -< ((),be)
 
     newAsteroids <- mapC (randomize asGen) <<< onceE initialAsteroids -< ()
 
-    asteroids   <- receivers []
-                <<< second (first (mapE asteroid))
-                -< ((),(newAsteroids, []))
+    rec (bullets, hits) <- senders []
+                        <<< delay [] *** (mapE bullet)
+                        -< (asteroids, be)
+
+        asteroids   <- receivers []
+                    <<< second (first (mapE asteroid))
+                    -< ((),(newAsteroids, hits))
 
     returnA -< \i ->
         interpolatedLines i pl
@@ -61,14 +64,21 @@ asteroid (Asteroid sz ibody hits lns) = proc ((), ev) -> do
         then returnA -< (Just $ Asteroid sz asbody ashits lns)
         else returnA -< Nothing
 
-bullet :: Bullet -> Item () Bullet
-bullet (Bullet ilife ibody) = proc () -> do
+bullet  :: Bullet
+        -> Sender [Tagged Asteroid] (Tagged AsteroidHit) Bullet
+bullet (Bullet ilife ibody) = proc asteroids -> do
     bbody <- body ibody 1.0  -< []
     blife <- integrate ilife -< -1
 
-    if blife > 0
-        then returnA -< (Just $ Bullet blife bbody)
-        else returnA -< Nothing
+    let bul   = Bullet blife bbody
+        colls = filter (collides bul . snd) asteroids
+        hits  = map (\(rid,_) -> (rid, AsteroidHit)) colls
+
+    if null hits
+        then if blife > 0
+            then returnA -< (Just bul, [])
+            else returnA -< (Nothing,  [])
+        else returnA -< (Nothing, hits)
 
 player :: Vec2 -> Coroutine (Keyboard, [Asteroid]) (Player, Event Bullet)
 player ipos = proc (kb, asteroids) -> do
