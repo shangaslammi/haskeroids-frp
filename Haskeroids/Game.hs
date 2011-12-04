@@ -3,6 +3,7 @@ module Haskeroids.Game where
 
 import Control.Applicative
 import Control.Arrow
+import qualified Control.Category as C
 import Control.Coroutine
 import Control.Coroutine.FRP
 import Control.Coroutine.FRP.Collections
@@ -32,9 +33,13 @@ game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-    newAsteroids <- mapC (randomize asGen) <<< onceE initialAsteroids -< ()
+    rec newAsteroids <- mapC (randomize asGen)
+                     <<< onceThen initialAsteroids C.id
+                     <<< concatMapE spawnNewAsteroids
+                     <<< delay []
+                     -< breaks
 
-    rec (bullets, hits) <- senders []
+        (bullets, hits) <- senders []
                         <<< delay [] *** (mapE bullet)
                         -< (asteroids, be)
 
@@ -53,7 +58,7 @@ game = proc kb -> do
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 data AsteroidHit = AsteroidHit
-data AsteroidBreak = AsteroidBreak
+type AsteroidBreak = Asteroid
 
 asteroid :: Asteroid
          -> RecvSend () AsteroidHit AsteroidBreak Asteroid
@@ -65,7 +70,7 @@ asteroid (Asteroid sz ibody hits lns) = proc ((), ev) -> do
 
     if ashits > 0
         then returnA -< (Just asteroid, [])
-        else returnA -< (Nothing, [AsteroidBreak])
+        else returnA -< (Nothing, [asteroid])
 
 bullet  :: Bullet
         -> Sender [Tagged Asteroid] (Tagged AsteroidHit) Bullet

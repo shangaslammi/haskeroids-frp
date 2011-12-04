@@ -92,12 +92,10 @@ collideAsteroids cs = foldrM go (cs,[]) where
 
 
 -- | Spawn random asteroids
-spawnNewAsteroids :: Asteroid -> ParticleGen [RandomAsteroid]
-spawnNewAsteroids a@(Asteroid sz b _ _) =
-    explosionParticles a >> return new where
-    new
-        | sz == Small = []
-        | otherwise   = replicate 3 $ randomAsteroid (pred sz) (bodyPos b)
+spawnNewAsteroids :: Asteroid -> [RandomAsteroid]
+spawnNewAsteroids a@(Asteroid sz b _ _)
+    | sz == Small = []
+    | otherwise   = replicate 3 $ randomAsteroid (pred sz) (bodyPos b)
 
 explosionParticles :: Asteroid -> ParticleGen ()
 explosionParticles (Asteroid sz b _ _) = addParticles n NewParticle
