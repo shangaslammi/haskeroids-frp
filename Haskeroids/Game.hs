@@ -1,5 +1,9 @@
 {-# LANGUAGE Arrows #-}
-module Haskeroids.Game where
+module Haskeroids.Game
+    ( game
+    , RenderFunc
+    , GameCoroutine
+    ) where
 
 import Control.Applicative
 import Control.Arrow
