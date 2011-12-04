@@ -36,26 +36,30 @@ game = proc kb -> do
 
     newAsteroids <- mapC (randomize asGen) <<< onceE initialAsteroids -< ()
 
-    asteroids   <- collection []
-                <<< second (mapE asteroid)
-                -< ((),newAsteroids)
+    asteroids   <- receivers []
+                <<< second (first (mapE asteroid))
+                -< ((),(newAsteroids, []))
 
     returnA -< \i ->
         interpolatedLines i pl
             ++ concatMap (interpolatedLines i) bullets
-            ++ concatMap (interpolatedLines i) asteroids
+            ++ concatMap (interpolatedLines i . snd) asteroids
 
     where
         initialAsteroids = replicate 3 genInitialAsteroid
         asGen = initRandomGen 123
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
+data AsteroidHit = AsteroidHit
 
-asteroid :: Asteroid -> Item () Asteroid
-asteroid (Asteroid sz ibody hits lns) = proc () -> do
+asteroid :: Asteroid -> Receiver () AsteroidHit Asteroid
+asteroid (Asteroid sz ibody hits lns) = proc ((), ev) -> do
     asbody <- body ibody 1.0 -< []
+    ashits <- scanE (-) hits <<< constE 1 -< ev
 
-    returnA -< (Just $ Asteroid sz asbody hits lns)
+    if ashits > 0
+        then returnA -< (Just $ Asteroid sz asbody ashits lns)
+        else returnA -< Nothing
 
 bullet :: Bullet -> Item () Bullet
 bullet (Bullet ilife ibody) = proc () -> do
