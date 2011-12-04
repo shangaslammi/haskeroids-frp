@@ -1,9 +1,9 @@
 module Haskeroids.Player
     ( Player(..)
-    , initPlayer
-    , collidePlayer
-    , tickPlayer
     , playerExplosionParticles
+    , engineParticles
+    , fireDelay
+    , shipDamping
     ) where
 
 import Haskeroids.Geometry
@@ -24,8 +24,6 @@ import Control.Monad (when)
 data Player = Player
     { playerBody   :: Body
     , playerAlive  :: Bool
-    , playerBullet :: Maybe Bullet
-    , playerROF    :: Int
     }
 
 -- | Constant for the ship size
@@ -41,7 +39,7 @@ shipDamping :: Float
 shipDamping = 0.96
 
 instance LineRenderable Player where
-    interpolatedLines f (Player body alive _ _)
+    interpolatedLines f (Player body alive)
         | not alive = []
         | otherwise = map (transform b') shipLines where
             b' = interpolatedBody f body
@@ -51,48 +49,16 @@ instance Collider Player where
     collisionRadius = const shipSize
     collisionLines  = interpolatedLines 0
 
--- | Handle keyboard input and update the player ship
-tickPlayer :: Keyboard -> Player -> ParticleGen Player
-tickPlayer kb p@(Player body alive _ rof)
-    | not alive = return $ p { playerBullet = Nothing }
-    | otherwise = do
-        when (acc > 0) emitEngineParticles
-        return $ Player body' True bullet rof' where
-
-        body' = updatePlayerBody turn acc body
-
-        turn
-            | key turnLeft  = -0.18
-            | key turnRight =  0.18
-            | otherwise     =  0
-
-        acc
-            | key thrust = 0.7
-            | otherwise  = 0
-
-        bullet
-            | rof == 0 && key shoot = Just newBullet
-            | otherwise             = Nothing
-
-        rof'
-            | isJust bullet = fireDelay
-            | otherwise     = if rof > 0 then rof - 1 else 0
-
-        newBullet = initBullet (bodyPos body) (bodyAngle body)
-        key       = isKeyDown kb
-
-        emitDir   = bodyAngle body + pi
-
-        emitEngineParticles = addParticles 2 $ NewParticle
-            { npPosition  = bodyPos body /+/ polar (shipSize/3.0) emitDir
-            , npRadius    = 0
-            , npDirection = emitDir
-            , npSpread    = pi/6.0
-            , npSpeed     = (1.0, 4.0)
-            , npLifeTime  = (5, 15)
-            , npSize      = (1,1)
-            }
-
+engineParticles :: Player -> ParticleGen ()
+engineParticles (Player body _) = addParticles 2 $ NewParticle
+    { npPosition  = bodyPos body /+/ polar (shipSize/3.0) emitDir
+    , npRadius    = 0
+    , npDirection = emitDir
+    , npSpread    = pi/6.0
+    , npSpeed     = (1.0, 4.0)
+    , npLifeTime  = (5, 15)
+    , npSize      = (1,1)
+    } where emitDir   = bodyAngle body + pi
 
 playerExplosionParticles :: Player -> ParticleGen ()
 playerExplosionParticles p = addParticles 40 NewParticle
@@ -105,25 +71,6 @@ playerExplosionParticles p = addParticles 40 NewParticle
     , npSize      = (2,4)
     } where
         b = playerBody p
-
--- | Test collision between the player ship and a list of Colliders
---   If the ship intersects with any, it is destroyed
-collidePlayer :: Collider a => [a] -> Player -> ParticleGen Player
-collidePlayer _  p@(Player _ False _ _) = return p
-collidePlayer [] p = return p
-collidePlayer a  p = do
-    let collision = any (collides p) a
-    when collision $ playerExplosionParticles p
-    return $ p { playerAlive = not collision }
-
--- | Initial state for the player ship at center of the screen
-initPlayer :: Player
-initPlayer = Player (initBody (400,300) 0 (0,0) 0) True Nothing 0
-
--- | Update the player ship with the given turn rate and acceleration
-updatePlayerBody :: Float -> Float -> Body -> Body
-updatePlayerBody turn acc =
-    updateBody . damping shipDamping . accForward acc . rotate turn
 
 -- | List of lines that make up the ship hull
 shipLines :: [LineSegment]

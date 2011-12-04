@@ -122,7 +122,7 @@ player ipos = proc (kb, asteroids) -> do
     thrust <- arr kbThrust -< kb
     turn   <- arr kbTurn   -< kb
 
-    rec pbody   <- body initialBody 0.96
+    rec pbody   <- body initialBody shipDamping
                 -< accEv ++ [SetRotation turn]
 
         accEv   <- mapE accelerate
@@ -132,7 +132,7 @@ player ipos = proc (kb, asteroids) -> do
     rec let collision = any (collides prev) asteroids
         prev  <- delay initialPlayer -< pl
         alive <- scan (&&) True      -< not collision
-        let pl = Player pbody alive Nothing 0
+        let pl = Player pbody alive
 
     rec bullets <- mapE fireBullet
                 <<< watch shouldShoot
@@ -142,13 +142,13 @@ player ipos = proc (kb, asteroids) -> do
     returnA -< (pl, bullets) where
 
         initialBody   = initBody ipos 0 (0,0) 0
-        initialPlayer = Player initialBody True Nothing 0
+        initialPlayer = Player initialBody True
 
         shouldShoot (rof, _, kb) = rof <= 0 && isKeyDown kb Controls.shoot
         fireBullet (_, body, _)  = initBullet (bodyPos body) (bodyAngle body)
         tickROF rof ev
             | null ev   = rof-1
-            | otherwise = 5
+            | otherwise = fireDelay
 
         kbThrust kb
             | isKeyDown kb Controls.thrust = 0.7
