@@ -3,10 +3,7 @@ module Haskeroids.Asteroid
     , RandomAsteroid
     , Size(..)
     , genInitialAsteroid
-    , updateAsteroid
     , spawnNewAsteroids
-    , collideAsteroids
-    , asteroidAlive
     , asteroidExplosionParticles
     ) where
 
@@ -25,7 +22,7 @@ data Size = Small|Medium|Large deriving (Ord, Eq, Enum)
 data Asteroid = Asteroid
     { asteroidSize  :: Size
     , asteroidBody  :: Body
-    , asteroidHits  :: Hitpoints
+    , asteroidHits  :: Int
     , asteroidLines :: [LineSegment]
     }
 
@@ -62,36 +59,6 @@ numVertices Large  = 17
 newAsteroid :: Size -> Vec2 -> Vec2 -> Float -> [LineSegment] -> Asteroid
 newAsteroid sz pos v r = Asteroid sz (initBody pos 0 v r) (maxHits sz)
 
--- | Update an asteroid's position
-updateAsteroid :: Asteroid -> Asteroid
-updateAsteroid a = a { asteroidBody = updateBody $ asteroidBody a }
-
--- | Reduce asteroid hitpoints by one
-damageAsteroid :: Asteroid -> Asteroid
-damageAsteroid a = a {asteroidHits = asteroidHits a - 1}
-
--- | Check if the asteroid still has hitpoints left
-asteroidAlive :: Asteroid -> Bool
-asteroidAlive = (0<).asteroidHits
-
--- | Collide an asteroid against multiple colliders and return a new modified
---   asteroid and a list of remaining colliders.
-collideAsteroid :: Collider c => [c] -> Asteroid -> ParticleGen ([c], Asteroid)
-collideAsteroid cs a = foldrM go ([], a) cs where
-    go c (cs, a)
-        | collides c a = collisionParticles c >> return (cs, damageAsteroid a)
-        | otherwise    = return (c:cs, a)
-
--- | Collide a list of asteroids against a list of other colliders
---   Returns the remaining colliders and damaged asteroids.
-collideAsteroids :: Collider c =>
-    [c] -> [Asteroid] -> ParticleGen ([c], [Asteroid])
-collideAsteroids cs = foldrM go (cs,[]) where
-    go a (cs,as) = do
-        (cs',a') <- collideAsteroid cs a
-        return (cs', a':as)
-
-
 -- | Spawn random asteroids
 spawnNewAsteroids :: Asteroid -> [RandomAsteroid]
 spawnNewAsteroids a@(Asteroid sz b _ _)
@@ -120,7 +87,6 @@ randomAsteroid sz pos = do
     lns     <- genAsteroidLines sz
 
     return $ newAsteroid sz (pos /+/ (dx,dy)) (vx,vy) rot lns
-
 
 -- | Generate an initial asteroid in the level
 genInitialAsteroid :: RandomAsteroid
