@@ -1,14 +1,10 @@
 module Haskeroids.Particles
-    ( ParticleSystem
-    , Particle(..)
+    ( Particle(..)
     , NewParticle(..)
     , ParticleGen
-    , initParticleSystem
-    , initNewParticles
     , addParticle
     , addParticles
     , runParticleGen
-    , tickParticles
     , initParticle
     , interpolateParticle
     ) where
@@ -56,9 +52,6 @@ interpolateParticle :: Float -> Particle -> LineSegment
 interpolateParticle f (Particle b _ ln) = transform b' ln where
     b' = interpolatedBody f b
 
-initParticleSystem :: ParticleSystem
-initParticleSystem = ParticleSystem []
-
 initParticle :: NewParticle -> RandomParticle
 initParticle (NewParticle p r d spr spd lt sz) = do
     e <- randomElliptical (0, r) (0, r)
@@ -74,13 +67,6 @@ initParticle (NewParticle p r d spr spd lt sz) = do
         , particleLine = mkParticleLine s
         }
 
-tickParticles :: ParticleSystem -> ParticleSystem
-tickParticles (ParticleSystem ps) = ParticleSystem $ foldr go [] ps where
-    go (Particle body life ln) acc
-        | life == 0 = acc
-        | otherwise = Particle (updateBody body) (life-1) ln : acc
-
-
 addParticle :: NewParticle -> ParticleGen ()
 addParticle = tell . return
 
@@ -89,8 +75,3 @@ addParticles n = tell . replicate n
 
 runParticleGen :: ParticleGen a -> (a, [NewParticle])
 runParticleGen = runWriter
-
-initNewParticles :: [NewParticle] -> ParticleSystem -> Random ParticleSystem
-initNewParticles nps (ParticleSystem ps) = do
-    p <- mapM initParticle nps
-    return $ ParticleSystem $ p ++ ps
