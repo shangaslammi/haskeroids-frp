@@ -14,7 +14,6 @@ import Graphics.UI.GLUT
 
 import Haskeroids.Render
 import Haskeroids.Keyboard
-import Haskeroids.State
 import Haskeroids.Text.Font
 import Haskeroids.Game
 
