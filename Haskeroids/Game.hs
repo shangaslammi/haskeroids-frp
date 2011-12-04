@@ -22,7 +22,7 @@ import Haskeroids.Player
 import Haskeroids.Random
 import Haskeroids.Render
 
-type RenderFunc    = Float -> [LineSegment]
+type RenderFunc    = Float -> IO ()
 type GameCoroutine = Coroutine Keyboard RenderFunc
 
 randomize :: RandomGen -> Coroutine (Random a) a
@@ -63,11 +63,11 @@ game = proc kb -> do
 
     particles <- collection [] -< ((), newParticles)
 
-    returnA -< \i ->
-        interpolatedLines i pl
-            ++ concatMap (interpolatedLines i) bullets
-            ++ concatMap (interpolatedLines i . snd) asteroids
-            ++ map (interpolateParticle i) particles
+    returnA -< \i -> do
+        renderInterpolated i pl
+        mapM_ (renderInterpolated i) bullets
+        mapM_ (renderInterpolated i) $ untag asteroids
+        renderLines $ map (interpolateParticle i) particles
 
     where
         initialAsteroids = replicate 3 genInitialAsteroid

@@ -65,7 +65,7 @@ renderViewport (ar, pr, kb, sr) = do
     clear [ColorBuffer]
 
     let interpolation = realToFrac $ accum' / secPerFrame
-    renderLines $ (fst s') interpolation
+    (fst s') interpolation
     -- renderInterpolated interpolation s'
 
     swapBuffers
