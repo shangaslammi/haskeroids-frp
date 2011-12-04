@@ -32,9 +32,8 @@ randomize gen = Coroutine $ \ra ->
 
 game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
-    (pl, be) <- player (400,300) -< (kb, [])
-
-    rec newAsteroids <- mapC (randomize asRng)
+    rec (pl, be) <- player (400,300) -< (kb, untag asteroids)
+        newAsteroids <- mapC (randomize asRng)
                      <<< onceThen initialAsteroids C.id
                      <<< concatMapE spawnNewAsteroids
                      <<< delay []
@@ -50,7 +49,7 @@ game = proc kb -> do
 
     death <- skipE 1 <<< edge -< playerAlive pl
 
-    let pgen = sequence_ $ map (collisionParticles.snd) hits
+    let pgen = sequence_ $ map collisionParticles (untag hits)
             ++ map asteroidExplosionParticles breaks
             ++ if not.null $ death
                     then [playerExplosionParticles pl]
