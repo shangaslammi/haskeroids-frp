@@ -3,6 +3,7 @@ module Haskeroids.Player
     , initPlayer
     , collidePlayer
     , tickPlayer
+    , playerExplosionParticles
     ) where
 
 import Haskeroids.Geometry
@@ -93,8 +94,8 @@ tickPlayer kb p@(Player body alive _ rof)
             }
 
 
-explosionParticles :: Player -> ParticleGen ()
-explosionParticles p = addParticles 40 NewParticle
+playerExplosionParticles :: Player -> ParticleGen ()
+playerExplosionParticles p = addParticles 40 NewParticle
     { npPosition  = bodyPos b
     , npRadius    = shipSize / 2.0
     , npDirection = 0
@@ -112,7 +113,7 @@ collidePlayer _  p@(Player _ False _ _) = return p
 collidePlayer [] p = return p
 collidePlayer a  p = do
     let collision = any (collides p) a
-    when collision $ explosionParticles p
+    when collision $ playerExplosionParticles p
     return $ p { playerAlive = not collision }
 
 -- | Initial state for the player ship at center of the screen

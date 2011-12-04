@@ -1,5 +1,6 @@
 module Haskeroids.Particles
     ( ParticleSystem
+    , Particle(..)
     , NewParticle(..)
     , ParticleGen
     , initParticleSystem
@@ -8,6 +9,8 @@ module Haskeroids.Particles
     , addParticles
     , runParticleGen
     , tickParticles
+    , initParticle
+    , interpolateParticle
     ) where
 
 import Haskeroids.Render

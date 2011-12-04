@@ -7,6 +7,7 @@ module Haskeroids.Asteroid
     , spawnNewAsteroids
     , collideAsteroids
     , asteroidAlive
+    , asteroidExplosionParticles
     ) where
 
 import Haskeroids.Geometry
@@ -97,8 +98,8 @@ spawnNewAsteroids a@(Asteroid sz b _ _)
     | sz == Small = []
     | otherwise   = replicate 3 $ randomAsteroid (pred sz) (bodyPos b)
 
-explosionParticles :: Asteroid -> ParticleGen ()
-explosionParticles (Asteroid sz b _ _) = addParticles n NewParticle
+asteroidExplosionParticles :: Asteroid -> ParticleGen ()
+asteroidExplosionParticles (Asteroid sz b _ _) = addParticles n NewParticle
     { npPosition  = bodyPos b
     , npRadius    = radius sz / 2.0
     , npDirection = 0

@@ -17,6 +17,7 @@ import Haskeroids.Collision
 import Haskeroids.Geometry
 import Haskeroids.Geometry.Body
 import Haskeroids.Keyboard
+import Haskeroids.Particles
 import Haskeroids.Player
 import Haskeroids.Random
 import Haskeroids.Render
@@ -33,7 +34,7 @@ game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-    rec newAsteroids <- mapC (randomize asGen)
+    rec newAsteroids <- mapC (randomize asRng)
                      <<< onceThen initialAsteroids C.id
                      <<< concatMapE spawnNewAsteroids
                      <<< delay []
@@ -47,17 +48,46 @@ game = proc kb -> do
                             <<< second (first (mapE asteroid))
                             -< ((),(newAsteroids, hits))
 
+    death <- skipE 1 <<< edge -< playerAlive pl
+
+    let pgen = sequence_ $ map (collisionParticles.snd) hits
+            ++ map asteroidExplosionParticles breaks
+            ++ if not.null $ death
+                    then [playerExplosionParticles pl]
+                    else []
+
+    newParticles    <- mapE particle
+                    <<< randomize pgRng
+                    <<< arr sequence
+                    <<< mapE initParticle
+                    -< snd (runParticleGen pgen)
+
+    particles <- collection [] -< ((), newParticles)
+
     returnA -< \i ->
         interpolatedLines i pl
             ++ concatMap (interpolatedLines i) bullets
             ++ concatMap (interpolatedLines i . snd) asteroids
+            ++ map (interpolateParticle i) particles
 
     where
         initialAsteroids = replicate 3 genInitialAsteroid
-        asGen = initRandomGen 123
+        asRng = initRandomGen 123
+        pgRng = initRandomGen 321
+
+particle :: Particle -> Item () Particle
+particle (Particle ibody ilife line) = proc () -> do
+    pbody <- body ibody 1.0  -< []
+    plife <- integrate ilife -< -1
+
+    let p = Particle pbody plife line
+
+    if plife > 0
+        then returnA -< Just p
+        else returnA -< Nothing
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
-data AsteroidHit = AsteroidHit
+type AsteroidHit = Bullet
 type AsteroidBreak = Asteroid
 
 asteroid :: Asteroid
@@ -80,7 +110,7 @@ bullet (Bullet ilife ibody) = proc asteroids -> do
 
     let bul   = Bullet blife bbody
         colls = filter (collides bul . snd) asteroids
-        hits  = map (\(rid,_) -> (rid, AsteroidHit)) colls
+        hits  = map (\(rid,_) -> (rid, bul)) colls
 
     if null hits
         then if blife > 0
