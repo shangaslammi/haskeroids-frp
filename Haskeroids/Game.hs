@@ -32,16 +32,15 @@ game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     (pl, be) <- player (400,300) -< (kb, [])
 
-
     newAsteroids <- mapC (randomize asGen) <<< onceE initialAsteroids -< ()
 
     rec (bullets, hits) <- senders []
                         <<< delay [] *** (mapE bullet)
                         -< (asteroids, be)
 
-        asteroids   <- receivers []
-                    <<< second (first (mapE asteroid))
-                    -< ((),(newAsteroids, hits))
+        (asteroids, breaks) <- recvSenders []
+                            <<< second (first (mapE asteroid))
+                            -< ((),(newAsteroids, hits))
 
     returnA -< \i ->
         interpolatedLines i pl
@@ -54,15 +53,19 @@ game = proc kb -> do
 
 data BodyEvent = Accelerate Vec2 | SetRotation Float
 data AsteroidHit = AsteroidHit
+data AsteroidBreak = AsteroidBreak
 
-asteroid :: Asteroid -> Receiver () AsteroidHit Asteroid
+asteroid :: Asteroid
+         -> RecvSend () AsteroidHit AsteroidBreak Asteroid
 asteroid (Asteroid sz ibody hits lns) = proc ((), ev) -> do
     asbody <- body ibody 1.0 -< []
     ashits <- scanE (-) hits <<< constE 1 -< ev
 
+    let asteroid = Asteroid sz asbody ashits lns
+
     if ashits > 0
-        then returnA -< (Just $ Asteroid sz asbody ashits lns)
-        else returnA -< Nothing
+        then returnA -< (Just asteroid, [])
+        else returnA -< (Nothing, [AsteroidBreak])
 
 bullet  :: Bullet
         -> Sender [Tagged Asteroid] (Tagged AsteroidHit) Bullet
