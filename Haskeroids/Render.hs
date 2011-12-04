@@ -42,4 +42,6 @@ lineVertices (LineSegment (p,p')) = ptVertex p >> ptVertex p'
 
 -- | Generate an OpenGL vertex from a point
 ptVertex :: Vec2 -> IO ()
-ptVertex = vertex . uncurry Vertex2
+ptVertex = vertex . uncurry Vertex2 . convert where
+    convert :: Vec2 -> (GLfloat, GLfloat)
+    convert (x,y) = (realToFrac x, realToFrac y)
