@@ -85,7 +85,6 @@ particle (Particle ibody ilife line) = proc () -> do
         then returnA -< Just p
         else returnA -< Nothing
 
-data BodyEvent = Accelerate Vec2 | SetRotation Float
 type AsteroidHit = Bullet
 type AsteroidBreak = Asteroid
 
@@ -160,6 +159,8 @@ player ipos = proc (kb, asteroids) -> do
             | otherwise                       =  0.00
 
         accelerate (thrust, angle) = Accelerate $ polar thrust angle
+
+data BodyEvent = Accelerate Vec2 | SetRotation Float
 
 body :: Body -> Float -> Coroutine (Event BodyEvent) Body
 body (Body ipos iangle ivel irot _ _) fric = proc ev -> do
