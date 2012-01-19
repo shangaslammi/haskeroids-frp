@@ -9,6 +9,9 @@ type Vec2 = (VecVal, VecVal)
 -- | Line segment between two points
 newtype LineSegment = LineSegment (Vec2, Vec2)
 
+type Position = Vec2
+type Velocity = Vec2
+
 -- | Conversion from polar to cartesian coordinates
 polar :: VecVal -- ^ radial coordinate
       -> VecVal -- ^ anglular coordinate
