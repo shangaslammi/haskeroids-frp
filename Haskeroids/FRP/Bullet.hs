@@ -4,6 +4,7 @@ module Haskeroids.FRP.Bullet where
 import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
+import Control.Coroutine.FRP.Collections
 
 import Haskeroids.Geometry
 import Haskeroids.FRP.Body
@@ -36,6 +37,12 @@ bulletFrom rng body = Bullet $ defaultBody
         ang  = angle body
         vel  = polar bulletSpeed ang
         lead = polar ang rng
+
+bullets :: Coroutine (Event Bullet, TEvent Collision) [Tagged Bullet]
+bullets = proc (new, collisions) ->
+    receivers [] -< ((), (map initBullet new, collisions))
+    where
+        initBullet b = proc (_,ev) -> bullet b -< ev
 
 bullet :: Bullet -> Coroutine (Event Collision) (Maybe Bullet)
 bullet (Bullet initBody) = proc collision -> do
