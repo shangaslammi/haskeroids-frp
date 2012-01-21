@@ -3,6 +3,7 @@
 module Haskeroids.FRP.Ship where
 
 import Control.Arrow
+import Control.Applicative
 import Control.Coroutine
 import Control.Coroutine.FRP
 
@@ -35,18 +36,19 @@ engineThrust = 0.7
 turnRate     = 0.18
 fireRate     = 10
 
-playerShip :: Coroutine Keyboard (Ship, Event Bullet)
-playerShip = proc kb -> do
+playerShip :: Coroutine (Keyboard, Event collision) (Maybe Ship, Event Bullet)
+playerShip = switchWith playerDead $ proc kb -> do
     rec delayed <- delay initBody -< body
         forces  <- shipControls   -< (delayed, kb)
         body    <- shipBody       -< forces
 
     bullets <- shipGun -< (kb, body)
 
-    returnA -< (Ship body, bullets)
+    returnA -< (Just (Ship body), bullets)
 
     where
-        shipBody = physicalBody initBody
+        shipBody   = physicalBody initBody
+        playerDead = const $ pure (Nothing, [])
 
 shipControls :: Coroutine (Body, Keyboard) BodyForces
 shipControls = proc (body, kb) -> do
