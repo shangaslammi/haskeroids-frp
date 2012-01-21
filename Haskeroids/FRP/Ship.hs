@@ -35,6 +35,19 @@ engineThrust = 0.7
 turnRate     = 0.18
 fireRate     = 10
 
+playerShip :: Coroutine Keyboard (Ship, Event Bullet)
+playerShip = proc kb -> do
+    rec delayed <- delay initBody -< body
+        forces  <- shipControls   -< (delayed, kb)
+        body    <- shipBody       -< forces
+
+    bullets <- shipGun -< (kb, body)
+
+    returnA -< (Ship body, bullets)
+
+    where
+        shipBody = physicalBody initBody
+
 shipControls :: Coroutine (Body, Keyboard) BodyForces
 shipControls = proc (body, kb) -> do
     let ang = angle body
@@ -50,19 +63,6 @@ shipControls = proc (body, kb) -> do
                 | isKeyDown kb Ctrl.turnLeft  = [-turnRate]
                 | isKeyDown kb Ctrl.turnRight = [turnRate]
                 | otherwise                   = []
-
-playerShip :: Coroutine Keyboard (Ship, Event Bullet)
-playerShip = proc kb -> do
-    rec delayed <- delay initBody -< body
-        forces  <- shipControls   -< (delayed, kb)
-        body    <- shipBody       -< forces
-
-    bullets <- shipGun -< (kb, body)
-
-    returnA -< (Ship body, bullets)
-
-    where
-        shipBody = physicalBody initBody
 
 shipGun :: Coroutine (Keyboard, Body) (Event Bullet)
 shipGun = proc (kb, body) -> do
