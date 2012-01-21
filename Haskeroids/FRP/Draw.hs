@@ -13,22 +13,22 @@ class HasBody d => Drawable d where
 
 data Scene where
     EmptyScene :: Scene
-    SingleDraw :: Drawable d => d -> Scene
+    DrawList   :: Drawable d => [d] -> Scene
     (:+:)      :: Scene -> Scene -> Scene
 
 instance Monoid Scene where
     mempty  = EmptyScene
     mappend = (:+:)
 
-draw :: Drawable d => d -> Scene
-draw = SingleDraw
+draw :: Drawable d => [d] -> Scene
+draw = DrawList
 
 render :: Scene -> Float -> IO ()
 render EmptyScene            _ = return ()
-render (SingleDraw drawable) t = renderDrawable drawable t
+render (DrawList drawables)  t = mapM_ (renderDrawable t) drawables
 render (sceneA :+: sceneB)   t = render sceneA t >> render sceneB t
 
-renderDrawable :: Drawable d => d -> Float -> IO ()
-renderDrawable d t = renderLines lns where
+renderDrawable :: Drawable d => Float -> d -> IO ()
+renderDrawable t d = renderLines lns where
     lns = transform (body d) (drawLines d)
 
