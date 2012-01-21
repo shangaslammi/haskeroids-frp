@@ -1,5 +1,11 @@
+{-# LANGUAGE Arrows #-}
 
-module Haskeroids.FRP.Particles where
+module Haskeroids.FRP.Particles (Particle, NewParticle(..), particles) where
+
+import Control.Arrow
+import Control.Coroutine
+import Control.Coroutine.FRP
+import Control.Coroutine.FRP.Collections
 
 import Haskeroids.Geometry
 import Haskeroids.Random
@@ -17,6 +23,25 @@ instance HasBody Particle where
 
 instance Drawable Particle where
     drawLines = particleLines
+
+particle :: Particle -> Coroutine () (Maybe Particle)
+particle initial = proc _ -> do
+    body <- constBody (particleBody initial) -< ()
+    life <- scan (-) (particleLife initial) -< 1
+
+    returnA -< if life > 0
+        then Just $ Particle body life lines
+        else Nothing
+
+    where
+        lines = particleLines initial
+
+particles :: Coroutine (Event NewParticle) [Particle]
+particles = proc new -> do
+    newParticles <- mapE particle <<< rand <<< mapE initParticle -< new
+    collection [] -< ((), newParticles)
+    where
+        rand = mapC $ randomize (initRandomGen 1122)
 
 mkParticleLine :: Float -> LineSegment
 mkParticleLine sz = LineSegment ((0,sz),(0,-sz))
