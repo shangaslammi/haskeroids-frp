@@ -2,6 +2,8 @@
 module Haskeroids.FRP.Collisions where
 
 import Control.Applicative
+import Control.Coroutine.FRP.Collections
+import Data.Maybe
 
 import Haskeroids.Geometry
 import Haskeroids.FRP.Body
@@ -10,6 +12,13 @@ class HasBody c => Collider c where
     collisionRadius :: c -> Float
     collisionLines  :: c -> [LineSegment]
 
+data Collision = Collision
+
+collisions :: (Collider a, Collider b) => [Tagged a] -> [Tagged b] -> (TEvent Collision, TEvent Collision)
+collisions as bs = unzip $ catMaybes $ collision <$> as <*> bs where
+    collision (atag, a) (btag, b)
+        | collides a b = Just ((atag, Collision), (btag, Collision))
+        | otherwise    = Nothing
 
 collides :: (Collider a, Collider b) => a -> b -> Bool
 collides c c' = canCollide && doesCollide where
