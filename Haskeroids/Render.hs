@@ -1,16 +1,9 @@
 
-module Haskeroids.Render (LineRenderable(..), renderLines) where
+module Haskeroids.Render (renderLines) where
 
 import Graphics.Rendering.OpenGL
 import Haskeroids.Geometry
 import Haskeroids.Geometry.Transform
-
--- | Object that can be rendered as a group of lines
-class LineRenderable r where
-    interpolatedLines :: Float -> r -> [LineSegment]
-
-    renderInterpolated :: Float -> r -> IO()
-    renderInterpolated f = renderLines . interpolatedLines f
 
 -- | Render a list of line segments using OpenGL
 renderLines :: [LineSegment] -> IO ()
