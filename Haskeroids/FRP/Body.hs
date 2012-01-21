@@ -1,4 +1,4 @@
-{-# LANGUAGE Arrows #-}
+{-# LANGUAGE Arrows, NamedFieldPuns #-}
 module Haskeroids.FRP.Body where
 
 import Control.Arrow
@@ -24,6 +24,22 @@ type AngularVelocity = Float
 type Angle           = Float
 type Friction        = Float
 
+type BodyForces = (Acceleration, Event AngularVelocity)
+
+class HasBody b where
+    body :: b -> Body
+
+defaultBody = Body
+    { position   = (0,0)
+    , velocity   = (0,0)
+    , angle      = 0
+    , angularVel = 0
+    , friction   = 1.0
+
+    , prevVelocity   = (0,0)
+    , prevAngularVel = 0
+    }
+
 interpolate :: Float -> Body -> Body
 interpolate t body = body
     { position = position body /-/ prevVelocity   body /* t'
@@ -31,7 +47,7 @@ interpolate t body = body
     }
     where t' = (t - 1.0)
 
-physicalBody :: Body -> Coroutine (Acceleration, Event AngularVelocity) Body
+physicalBody :: Body -> Coroutine BodyForces Body
 physicalBody initial = proc (accel, setAngVel) -> do
     vel <- updateC (velocity initial) -< \v -> (v /+/ accel) /* fric
     pos <- updateC (position initial) -< \p -> wrapAround (p /+/ vel)
@@ -57,3 +73,9 @@ physicalBody initial = proc (accel, setAngVel) -> do
 
 constBody :: Body -> Coroutine () Body
 constBody initial = proc _ -> physicalBody initial -< ((0,0), [])
+
+transform :: Body -> [LineSegment] -> [LineSegment]
+transform b = map $ applyXform $ transformPt b
+
+transformPt :: Body -> Vec2 -> Vec2
+transformPt (Body {position, angle}) = translatePt position . rotatePt angle
