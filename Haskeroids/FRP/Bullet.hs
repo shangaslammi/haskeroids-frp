@@ -15,6 +15,16 @@ newtype Bullet = Bullet { bulletBody :: Body }
 bulletSpeed = 10.0
 bulletLife  = 70
 
+instance HasBody Bullet where
+    body = bulletBody
+
+instance Drawable Bullet where
+    drawLines = const [LineSegment ((0,-bulletSpeed/2.0),(0,bulletSpeed/2.0))]
+
+instance Collider Bullet where
+    collisionRadius = const bulletSpeed
+    collisionLines  = const [LineSegment ((0,-bulletSpeed/2.0),(0,bulletSpeed))]
+
 bulletFrom :: Float -> Body -> Bullet
 bulletFrom rng body = Bullet $ defaultBody
     { position = position body /+/ lead
