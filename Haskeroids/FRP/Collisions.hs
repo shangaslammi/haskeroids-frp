@@ -12,12 +12,10 @@ class HasBody c => Collider c where
     collisionRadius :: c -> Float
     collisionLines  :: c -> [LineSegment]
 
-data Collision = Collision
-
-collisions :: (Collider a, Collider b) => [Tagged a] -> [Tagged b] -> (TEvent Collision, TEvent Collision)
-collisions as bs = unzip $ catMaybes $ collision <$> as <*> bs where
-    collision (atag, a) (btag, b)
-        | collides a b = Just ((atag, Collision), (btag, Collision))
+collisions :: (Collider a, Collider b) => [Tagged a] -> [Tagged b] -> [(Tagged a, Tagged b)]
+collisions as bs = catMaybes $ collision <$> as <*> bs where
+    collision taggedA@(_, a) taggedB@(_, b)
+        | collides a b = Just (taggedA, taggedB)
         | otherwise    = Nothing
 
 collides :: (Collider a, Collider b) => a -> b -> Bool

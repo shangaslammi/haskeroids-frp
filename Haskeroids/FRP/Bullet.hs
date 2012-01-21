@@ -38,13 +38,13 @@ bulletFrom rng body = Bullet $ defaultBody
         vel  = polar bulletSpeed ang
         lead = polar ang rng
 
-bullets :: Coroutine (Event Bullet, TEvent Collision) [Tagged Bullet]
+bullets :: Coroutine (Event Bullet, TEvent collision) [Tagged Bullet]
 bullets = proc (new, collisions) ->
     receivers [] -< ((), (map initBullet new, collisions))
     where
         initBullet b = proc (_,ev) -> bullet b -< ev
 
-bullet :: Bullet -> Coroutine (Event Collision) (Maybe Bullet)
+bullet :: Bullet -> Coroutine (Event collision) (Maybe Bullet)
 bullet (Bullet initBody) = proc collision -> do
     body <- constBody initBody  -< ()
     life <- scan (-) bulletLife -< 1
