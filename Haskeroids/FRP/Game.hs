@@ -17,16 +17,20 @@ import Haskeroids.FRP.Ship
 
 game :: Coroutine Keyboard Scene
 game = proc kb -> do
-    rec (ship, newBlts) <- playerShip -< (kb, plCollisions)
+    rec dShip <- delay Nothing -< ship
+        dAsts <- delay []      -< asts
+        dBlts <- delay []      -< blts
+
+        let plCollisions = case dShip of
+                Nothing   -> []
+                Just ship -> filter (collides ship) $ untag dAsts
+            (astCollisions, bltCollisions) = unzip $ collisions dAsts dBlts
+
+        (ship, newBlts) <- playerShip -< (kb, plCollisions)
         blts            <- bullets    -< (newBlts, bltCollisions)
         (asts, breaks)  <- asteroids  -< astCollisions
-
-        let plCollisions = case ship of
-                Nothing   -> []
-                Just ship -> filter (collides ship) $ untag asts
-
-            (astCollisions, bltCollisions) = unzip $ collisions asts blts
 
     returnA -< draw (maybeToList ship)
         :+: draw (untag blts)
         :+: draw (untag asts)
+

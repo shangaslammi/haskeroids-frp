@@ -42,10 +42,9 @@ defaultBody = Body
 
 interpolate :: Float -> Body -> Body
 interpolate t body = body
-    { position = position body /-/ prevVelocity   body /* t'
-    , angle    = angle    body  -  prevAngularVel body  * t'
+    { position = position body /+/ prevVelocity   body /* t
+    , angle    = angle    body  +  prevAngularVel body  * t
     }
-    where t' = (t - 1.0)
 
 physicalBody :: Body -> Coroutine BodyForces Body
 physicalBody initial = proc (accel, setAngVel) -> do

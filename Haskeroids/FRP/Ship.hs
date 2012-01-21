@@ -64,7 +64,7 @@ shipControls = proc (body, kb) -> do
             turn
                 | isKeyDown kb Ctrl.turnLeft  = [-turnRate]
                 | isKeyDown kb Ctrl.turnRight = [turnRate]
-                | otherwise                   = []
+                | otherwise                   = [0]
 
 shipGun :: Coroutine (Keyboard, Body) (Event Bullet)
 shipGun = proc (kb, body) -> do

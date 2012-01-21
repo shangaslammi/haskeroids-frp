@@ -55,11 +55,13 @@ asteroids :: Coroutine (TEvent collision) ([Tagged Asteroid], Event Break)
 asteroids = proc collisions -> do
     rec (objs, breaks) <- recvSenders [] -< ((), (newAsteroids, collisions))
         newAsteroids <- mapE asteroid <<< rand
-            <<< concatMapE spawnNewAsteroids <<< delay [] -< breaks
+            <<< onceThen initial (concatMapE spawnNewAsteroids
+                <<< delay []) -< breaks
 
     returnA -< (objs, breaks)
     where
-        rand = mapC $ randomize (initRandomGen 123)
+        rand    = mapC $ randomize (initRandomGen 123)
+        initial = replicate 3 genInitialAsteroid
 
 -- | Radius for an asteroid
 radius :: Size -> Float
@@ -123,3 +125,9 @@ genAsteroidLines sz = do
         points = zipWith polar radii angles
 
     return $ pointsToSegments $ points ++ [head points]
+
+-- | Generate an initial asteroid in the level
+genInitialAsteroid :: RandomAsteroid
+genInitialAsteroid = randomElliptical xb yb >>= randomAsteroid Large where
+    xb = (140, 400)
+    yb = (140, 300)

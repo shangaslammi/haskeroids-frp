@@ -12,14 +12,14 @@ import Data.Time.Clock.POSIX
 import Graphics.Rendering.OpenGL
 import Graphics.UI.GLUT
 
-import Haskeroids.Render
 import Haskeroids.Keyboard
 import Haskeroids.Text.Font
-import Haskeroids.Game
+import Haskeroids.FRP.Game
+import Haskeroids.FRP.Draw
 
 type KeyboardRef = IORef Keyboard
 type TimeRef     = IORef POSIXTime
-type StateRef    = IORef (RenderFunc, GameCoroutine)
+type StateRef    = IORef (Scene, Coroutine Keyboard Scene)
 type AccumRef    = TimeRef
 type PrevTimeRef = TimeRef
 
@@ -50,7 +50,7 @@ renderViewport (ar, pr, kb, sr) = do
     keys    <- readIORef kb
 
     let consumeAccum acc s@(_, co)
-            | acc >= secPerFrame =
+            | acc >= 0 =
                 consumeAccum (acc - secPerFrame) $ runC co keys
             | otherwise = (acc, s)
 
@@ -65,7 +65,7 @@ renderViewport (ar, pr, kb, sr) = do
     clear [ColorBuffer]
 
     let interpolation = realToFrac $ accum' / secPerFrame
-    (fst s') interpolation
+    render (fst s') interpolation
     -- renderInterpolated interpolation s'
 
     swapBuffers

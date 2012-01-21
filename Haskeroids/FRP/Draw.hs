@@ -35,5 +35,5 @@ render (sceneA :+: sceneB)   t = render sceneA t >> render sceneB t
 
 renderDrawable :: Drawable d => Float -> d -> IO ()
 renderDrawable t d = renderLines lns where
-    lns = transform (body d) (drawLines d)
+    lns = transform ((interpolate t (body d))) (drawLines d)
 
