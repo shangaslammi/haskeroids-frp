@@ -5,8 +5,12 @@ module Haskeroids.FRP.Asteroid where
 import Control.Arrow
 import Control.Coroutine
 import Control.Coroutine.FRP
+import Control.Coroutine.FRP.Collections
+
+import Data.List (sort)
 
 import Haskeroids.Geometry
+import Haskeroids.Random
 import Haskeroids.FRP.Body
 import Haskeroids.FRP.Draw
 import Haskeroids.FRP.Collisions
@@ -18,7 +22,9 @@ data Asteroid = Asteroid
     , asteroidLines :: [LineSegment]
     }
 
+type RandomAsteroid = Random Asteroid
 data Size = Small|Medium|Large deriving (Ord, Eq, Enum)
+newtype Break = Break Asteroid
 
 instance HasBody Asteroid where
     body = asteroidBody
@@ -29,6 +35,31 @@ instance Drawable Asteroid where
 instance Collider Asteroid where
     collisionLines  = asteroidLines
     collisionRadius = radius . asteroidSize
+
+asteroid :: Asteroid -> Coroutine ((), Event collision) (Maybe Asteroid, Event Break)
+asteroid initial = proc (_, collision) -> do
+    body      <- constBody initBody -< ()
+    hitpoints <- scanE (-) (maxHits size) <<< constE 1 -< collision
+
+    let a = Asteroid body size lines
+    returnA -< if hitpoints > 0
+        then (Just a,  [])
+        else (Nothing, [Break a])
+
+    where
+        initBody = asteroidBody initial
+        size     = asteroidSize initial
+        lines    = asteroidLines initial
+
+asteroids :: Coroutine (TEvent collision) ([Tagged Asteroid], Event Break)
+asteroids = proc collisions -> do
+    rec (objs, breaks) <- recvSenders [] -< ((), (newAsteroids, collisions))
+        newAsteroids <- mapE asteroid <<< rand
+            <<< concatMapE spawnNewAsteroids <<< delay [] -< breaks
+
+    returnA -< (objs, breaks)
+    where
+        rand = mapC $ randomize (initRandomGen 123)
 
 -- | Radius for an asteroid
 radius :: Size -> Float
@@ -48,16 +79,47 @@ numVertices Small  = 9
 numVertices Medium = 13
 numVertices Large  = 17
 
-asteroid :: Asteroid -> Coroutine ((), Event collision) (Maybe Asteroid)
-asteroid initial = proc (_, collision) -> do
-    body      <- constBody initBody -< ()
-    hitpoints <- scanE (-) (maxHits size) <<< constE 1 -< collision
+-- | Spawn random asteroids
+spawnNewAsteroids :: Break -> [RandomAsteroid]
+spawnNewAsteroids (Break (Asteroid b sz _ ))
+    | sz == Small = []
+    | otherwise   = replicate 3 $ randomAsteroid (pred sz) (position b)
 
-    returnA -< if hitpoints > 0
-        then Just $ Asteroid body size lines
-        else Nothing
+-- | Initialize a new asteroid with the given position, velocity and rotation
+newAsteroid :: Size -> Vec2 -> Vec2 -> Float -> [LineSegment] -> Asteroid
+newAsteroid sz pos v r = Asteroid body sz where
+    body = defaultBody
+        { position   = pos
+        , angle      = 0
+        , velocity   = v
+        , angularVel = r
 
-    where
-        initBody = asteroidBody initial
-        size     = asteroidSize initial
-        lines    = asteroidLines initial
+        , prevVelocity   = v
+        , prevAngularVel = r
+        }
+
+randomAsteroid :: Size -> Vec2 -> RandomAsteroid
+randomAsteroid sz pos = do
+    let r = radius sz
+
+    (dx,dy) <- randomPair r
+    (vx,vy) <- randomPair (40.0/r)
+    rot     <- randomBracket (3.0/r)
+    lns     <- genAsteroidLines sz
+
+    return $ newAsteroid sz (pos /+/ (dx,dy)) (vx,vy) rot lns
+
+-- | Generate the line segments for an asteroid size
+genAsteroidLines :: Size -> Random [LineSegment]
+genAsteroidLines sz = do
+    let numPts = numVertices sz
+        r      = radius sz
+
+    radii  <- nrandomR numPts (r*0.5, r)
+    angvar <- nrandomR numPts (-0.01*pi, 0.01*pi)
+
+    let step   = 2.0*pi/(fromIntegral numPts + 1)
+        angles = sort $ zipWith (+) angvar [0.0,step..2.0*pi]
+        points = zipWith polar radii angles
+
+    return $ pointsToSegments $ points ++ [head points]

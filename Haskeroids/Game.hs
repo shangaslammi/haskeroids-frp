@@ -29,11 +29,6 @@ import Haskeroids.Render
 type RenderFunc    = Float -> IO ()
 type GameCoroutine = Coroutine Keyboard RenderFunc
 
-randomize :: RandomGen -> Coroutine (Random a) a
-randomize gen = Coroutine $ \ra ->
-    let (a, gen') = runRandom ra gen
-    in (a, randomize gen')
-
 game :: Coroutine Keyboard RenderFunc
 game = proc kb -> do
     rec (pl, be) <- player (400,300) -< (kb, untag asteroids)

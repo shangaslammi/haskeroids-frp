@@ -8,6 +8,7 @@ module Haskeroids.Random
     , nrandomR
     , initRandomGen
     , runRandom
+    , randomize
     , Random
     , RandomGen
     ) where
@@ -16,12 +17,19 @@ import qualified System.Random as R
 import Control.Monad (liftM2, replicateM, Monad)
 import Control.Monad.State
 
+import Control.Coroutine
+
 type RandomGen = R.StdGen
 newtype Random a = Random { runR :: State RandomGen a}
 
 instance Monad Random where
     return a = Random (return a)
     (Random a) >>= b = Random $ a >>= (runR . b)
+
+randomize :: RandomGen -> Coroutine (Random a) a
+randomize gen = Coroutine $ \ra ->
+    let (a, gen') = runRandom ra gen
+    in (a, randomize gen')
 
 initRandomGen :: Int -> RandomGen
 initRandomGen = R.mkStdGen
