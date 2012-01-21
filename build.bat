@@ -1,1 +1,1 @@
-ghc --make -optl-mwindows main.hs
+ghc --make -O2 -optl-mwindows main.hs

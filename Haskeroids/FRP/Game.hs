@@ -7,6 +7,7 @@ import Control.Coroutine.FRP
 import Control.Coroutine.FRP.Collections
 import Data.Maybe
 
+import Haskeroids.Geometry
 import Haskeroids.Keyboard
 import Haskeroids.FRP.Asteroid
 import Haskeroids.FRP.Body
@@ -27,9 +28,10 @@ game = proc kb -> do
                 Just ship -> filter (collides ship) $ untag dAsts
             (astCollisions, bltCollisions) = unzip $ collisions dAsts dBlts
 
-        (ship, newBlts) <- playerShip -< (kb, plCollisions)
-        blts            <- bullets    -< (newBlts, bltCollisions)
-        (asts, breaks)  <- asteroids  -< astCollisions
+        (ship, newBlts, thrust) <- playerShip -< (kb, plCollisions)
+
+        blts           <- bullets    -< (newBlts, bltCollisions)
+        (asts, breaks) <- asteroids  -< astCollisions
 
     dead <- edge -< isJust ship
     shipDeath <- tagE -< (fromJust dShip, dead)
@@ -37,8 +39,10 @@ game = proc kb -> do
     let bulletParticles   = concatMap bulletHitParticles $ bltCollisions
         asteroidParticles = concatMap asteroidBreakParticles $ breaks
         deathParticles    = concatMap shipDeathParticles $ shipDeath
+        thrustParticles   = concatMap engineParticles $ thrust
 
     ptcls <- particles -< bulletParticles
+        ++ thrustParticles
         ++ asteroidParticles
         ++ deathParticles
 
@@ -83,3 +87,14 @@ shipDeathParticles ship = replicate 40 NewParticle
     , npLifeTime  = (15, 50)
     , npSize      = (2,4)
     }
+
+engineParticles :: Body -> [NewParticle]
+engineParticles body = replicate 2 $ NewParticle
+    { npPosition  = position body /+/ polar (shipSize/3.0) emitDir
+    , npRadius    = 0
+    , npDirection = emitDir
+    , npSpread    = pi/6.0
+    , npSpeed     = (1.0, 4.0)
+    , npLifeTime  = (5, 15)
+    , npSize      = (1,1)
+    } where emitDir   = angle body + pi

@@ -36,7 +36,7 @@ bulletFrom rng body = Bullet $ defaultBody
     } where
         ang  = angle body
         vel  = polar bulletSpeed ang
-        lead = polar ang rng
+        lead = polar rng ang
 
 bullets :: Coroutine (Event Bullet, TEvent collision) [Tagged Bullet]
 bullets = proc (new, collisions) ->

@@ -36,27 +36,24 @@ engineThrust = 0.7
 turnRate     = 0.18
 fireRate     = 10
 
-playerShip :: Coroutine (Keyboard, Event collision) (Maybe Ship, Event Bullet)
+type Thrust = Body
+
+playerShip :: Coroutine (Keyboard, Event collision) (Maybe Ship, Event Bullet, Event Thrust)
 playerShip = switchWith playerDead $ proc kb -> do
     rec delayed <- delay initBody -< body
-        forces  <- shipControls   -< (delayed, kb)
-        body    <- shipBody       -< forces
+        let (thrust, turn) = handleKeyboard kb
+            acceleration   = polar thrust (angle delayed)
+        body    <- shipBody       -< (acceleration, turn)
 
     bullets <- shipGun -< (kb, body)
 
-    returnA -< (Just (Ship body), bullets)
+    let thrustEvent = if thrust > 0 then [body] else []
+
+    returnA -< (Just (Ship body), bullets, thrustEvent)
 
     where
         shipBody   = physicalBody initBody
-        playerDead = const $ pure (Nothing, [])
-
-shipControls :: Coroutine (Body, Keyboard) BodyForces
-shipControls = proc (body, kb) -> do
-    let ang = angle body
-        (thrust, turn) = handleKeyboard kb
-
-    returnA -< (polar thrust ang, turn)
-    where
+        playerDead = const $ pure (Nothing, [], [])
         handleKeyboard kb = (thrust, turn) where
             thrust
                 | isKeyDown kb Ctrl.thrust = engineThrust
