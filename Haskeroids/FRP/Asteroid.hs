@@ -131,3 +131,4 @@ genInitialAsteroid :: RandomAsteroid
 genInitialAsteroid = randomElliptical xb yb >>= randomAsteroid Large where
     xb = (140, 400)
     yb = (140, 300)
+
