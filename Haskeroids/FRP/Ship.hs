@@ -4,11 +4,12 @@ module Haskeroids.FRP.Ship where
 
 import Haskeroids.FRP.Body
 import Haskeroids.FRP.Draw
+import Haskeroids.FRP.Collisions
 import Haskeroids.Geometry
 import Haskeroids.Keyboard
 import qualified Haskeroids.Controls as Ctrl
 
-data Ship = Ship
+newtype Ship = Ship
     { shipBody :: Body
     }
 
@@ -17,6 +18,10 @@ instance HasBody Ship where
 
 instance Drawable Ship where
     drawLines = shipLines
+
+instance Collider Ship where
+    collisionLines  = shipLines
+    collisionRadius = shipSize
 
 initBody = defaultBody
     { position = (400, 300)
@@ -42,14 +47,21 @@ shipControls = proc (body, kb) -> do
                 | isKeyDown kb Ctrl.turnRight = [turnRate]
                 | otherwise                   = []
 
-playerShip :: Coroutine Keyboard Ship
+playerShip :: Coroutine Keyboard (Ship, Event Bullet)
 playerShip = proc kb -> do
     rec delayed <- delay initBody -< body
         forces  <- shipControls   -< (delayed, kb)
         body    <- shipBody       -< forces
 
+    bullets <- shipGun -< kb
+
+    returnA -< (Ship body, bullets)
+
     where
         shipBody = physicalBody initBody
+
+shipGun :: Coroutine Keyboard (Event Bullet)
+shipGun = undefined
 
 shipSize :: Float
 shipSize = 12.0
