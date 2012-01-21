@@ -2,26 +2,29 @@
 
 module Haskeroids.FRP.Ship where
 
+import Control.Arrow
+import Control.Coroutine
+import Control.Coroutine.FRP
+
 import Haskeroids.FRP.Body
+import Haskeroids.FRP.Bullet
 import Haskeroids.FRP.Draw
 import Haskeroids.FRP.Collisions
 import Haskeroids.Geometry
 import Haskeroids.Keyboard
 import qualified Haskeroids.Controls as Ctrl
 
-newtype Ship = Ship
-    { shipBody :: Body
-    }
+newtype Ship = Ship { shipBody :: Body }
 
 instance HasBody Ship where
     body = shipBody
 
 instance Drawable Ship where
-    drawLines = shipLines
+    drawLines = const shipLines
 
 instance Collider Ship where
-    collisionLines  = shipLines
-    collisionRadius = shipSize
+    collisionLines  = const shipLines
+    collisionRadius = const shipSize
 
 initBody = defaultBody
     { position = (400, 300)
@@ -30,6 +33,7 @@ initBody = defaultBody
 
 engineThrust = 0.7
 turnRate     = 0.18
+fireRate     = 10
 
 shipControls :: Coroutine (Body, Keyboard) BodyForces
 shipControls = proc (body, kb) -> do
@@ -53,15 +57,26 @@ playerShip = proc kb -> do
         forces  <- shipControls   -< (delayed, kb)
         body    <- shipBody       -< forces
 
-    bullets <- shipGun -< kb
+    bullets <- shipGun -< (kb, body)
 
     returnA -< (Ship body, bullets)
 
     where
         shipBody = physicalBody initBody
 
-shipGun :: Coroutine Keyboard (Event Bullet)
-shipGun = undefined
+shipGun :: Coroutine (Keyboard, Body) (Event Bullet)
+shipGun = proc (kb, body) -> do
+    rec let fireButton = isKeyDown kb Ctrl.shoot
+            canFire    = recharge <= 0
+            bulletEv
+                | fireButton && canFire = [bulletFrom shipSize body]
+                | otherwise             = []
+        recharge <- delay 0 <<< rechargeCounter -< (1, bulletEv)
+
+    returnA -< bulletEv
+    where
+        rechargeCounter = restartWhen $ scan (-) fireRate
+
 
 shipSize :: Float
 shipSize = 12.0
