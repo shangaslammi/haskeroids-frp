@@ -1,5 +1,10 @@
 {-# LANGUAGE GADTs #-}
-module Haskeroids.FRP.Draw (Scene, Drawable(..), draw, render) where
+module Haskeroids.FRP.Draw
+    ( Scene((:+:))
+    , Drawable(..)
+    , draw
+    , render
+    ) where
 
 import Data.Monoid
 
