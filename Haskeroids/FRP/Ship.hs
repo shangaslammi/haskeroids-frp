@@ -71,11 +71,12 @@ shipGun = proc (kb, body) -> do
             bulletEv
                 | fireButton && canFire = [bulletFrom shipSize body]
                 | otherwise             = []
-        recharge <- delay 0 <<< rechargeCounter -< (1, bulletEv)
+        recharge <- delay 0 <<< rechargeCounter -< bulletEv
 
     returnA -< bulletEv
     where
-        rechargeCounter = restartWhen $ scan (-) fireRate
+        rechargeCounter = proc ev ->
+            updateC 0 -< if null ev then (subtract 1) else (const fireRate)
 
 
 shipSize :: Float
