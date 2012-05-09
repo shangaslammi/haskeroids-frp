@@ -19,9 +19,9 @@ import Haskeroids.FRP.Draw
 import Haskeroids.FRP.Particles
 import Haskeroids.FRP.Ship
 
-type PlayerCollisions   = Event Asteroid
-type AsteroidCollisions = TEvent Asteroid
-type BulletCollisions   = TEvent Bullet
+type PlayerCollision   = Asteroid
+type AsteroidCollision = Asteroid
+type BulletCollision   = Bullet
 
 game :: Coroutine Keyboard Scene
 game = proc kb -> do
@@ -56,7 +56,7 @@ game = proc kb -> do
 
 collider :: Coroutine
     (Maybe Ship, [Tagged Bullet], [Tagged Asteroid])
-    (PlayerCollisions, BulletCollisions, AsteroidCollisions)
+    (Event PlayerCollision, TEvent BulletCollision, TEvent AsteroidCollision)
 collider = proc (ship, bullets, asteroids) -> do
     let plCollisions = case ship of
             Nothing   -> []
