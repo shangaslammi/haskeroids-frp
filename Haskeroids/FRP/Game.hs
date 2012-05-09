@@ -19,29 +19,31 @@ import Haskeroids.FRP.Ship
 
 game :: Coroutine Keyboard Scene
 game = proc kb -> do
-    rec dShip <- delay Nothing -< ship
-        dAsts <- delay []      -< asts
-        dBlts <- delay []      -< blts
-
-        let plCollisions = case dShip of
+    rec let plCollisions = case ship of
                 Nothing   -> []
-                Just ship -> filter (collides ship) $ untag dAsts
-            (astCollisions, bltCollisions) = unzip $ collisions dAsts dBlts
+                Just ship -> filter (collides ship) $ untag asts
+            ~(astCollisions, bltCollisions) = unzip $ collisions asts blts
 
-        (ship, newBlts, thrust) <- playerShip -< (kb, plCollisions)
+        (ship, newBlts, thrust) <- playerShip
+            <<< second (delay [])
+            -< (kb, plCollisions)
 
-        blts           <- bullets    -< (newBlts, bltCollisions)
-        (asts, breaks) <- asteroids  -< astCollisions
+        blts <- bullets
+            <<< second (delay [])
+            -< (newBlts, bltCollisions)
 
-    dead <- edge -< isJust ship
-    shipDeath <- tagE -< (fromJust dShip, dead)
+        (asts, breaks) <- asteroids <<< delay [] -< astCollisions
 
-    let bulletParticles   = concatMap bulletHitParticles $ bltCollisions
-        asteroidParticles = concatMap asteroidBreakParticles $ breaks
-        deathParticles    = concatMap shipDeathParticles $ shipDeath
-        thrustParticles   = concatMap engineParticles $ thrust
+    dead      <- edge -< isJust ship
+    shipDeath <- tagE <<< first (arr fromJust <<< delay Nothing) -< (ship, dead)
 
-    ptcls <- particles -< bulletParticles
+    let bulletParticles   = map bulletHitParticles bltCollisions
+        asteroidParticles = map asteroidBreakParticles breaks
+        deathParticles    = map shipDeathParticles shipDeath
+        thrustParticles   = map engineParticles thrust
+
+    ptcls <- particles -< concat
+        $  bulletParticles
         ++ thrustParticles
         ++ asteroidParticles
         ++ deathParticles
