@@ -1,4 +1,6 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE RankNTypes #-}
+
 module Haskeroids.FRP.Game where
 
 import Control.Arrow
@@ -17,25 +19,20 @@ import Haskeroids.FRP.Draw
 import Haskeroids.FRP.Particles
 import Haskeroids.FRP.Ship
 
+type PlayerCollisions   = Event Asteroid
+type AsteroidCollisions = TEvent Asteroid
+type BulletCollisions   = TEvent Bullet
+
 game :: Coroutine Keyboard Scene
 game = proc kb -> do
     rec
-        (ship, newBlts, thrust) <- playerShip
-            <<< second (delay [])
-            -< (kb, plCollisions)
+        ~(ship, newBlts, thrust) <- playerShip -< (kb, plCollisions)
 
-        blts <- bullets
-            <<< second (delay [])
-            -< (newBlts, bltCollisions)
+        blts <- bullets -< (newBlts, bltCollisions)
 
-        (asts, breaks) <- asteroids
-            <<< delay []
-            -< astCollisions
+        (asts, breaks) <- asteroids -< astCollisions
 
-        let plCollisions = case ship of
-                Nothing   -> []
-                Just ship -> filter (collides ship) $ untag asts
-            ~(astCollisions, bltCollisions) = unzip $ collisions asts blts
+        (plCollisions, bltCollisions, astCollisions) <- collider -< (ship, blts, asts)
 
     dead      <- edge -< isJust ship
     shipDeath <- tagE <<< first (arr fromJust <<< delay Nothing) -< (ship, dead)
@@ -55,6 +52,17 @@ game = proc kb -> do
         :+: draw (untag blts)
         :+: draw (untag asts)
         :+: draw ptcls
+
+
+collider :: Coroutine
+    (Maybe Ship, [Tagged Bullet], [Tagged Asteroid])
+    (PlayerCollisions, BulletCollisions, AsteroidCollisions)
+collider = proc (ship, bullets, asteroids) -> do
+    let plCollisions = case ship of
+            Nothing   -> []
+            Just ship -> filter (collides ship) $ untag asteroids
+        (astCollisions, bltCollisions) = unzip $ collisions asteroids bullets
+    returnA <<< delay ([],[],[]) -< (plCollisions, bltCollisions, astCollisions)
 
 
 bulletHitParticles :: Tagged Bullet -> [NewParticle]
