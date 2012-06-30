@@ -79,9 +79,6 @@ initParticle (NewParticle p r d spr spd lt sz) = do
             , velocity = vel
             , angle    = n
             , angularVel = r
-
-            , prevVelocity = vel
-            , prevAngularVel = r
             }
         , particleLife  = l
         , particleLines = [mkParticleLine s]

@@ -14,9 +14,6 @@ data Body = Body
     , angle      :: Angle
     , angularVel :: AngularVelocity
     , friction   :: Friction
-
-    , prevVelocity   :: Velocity
-    , prevAngularVel :: AngularVelocity
     }
 
 type Acceleration    = Vec2
@@ -35,15 +32,12 @@ defaultBody = Body
     , angle      = 0
     , angularVel = 0
     , friction   = 1.0
-
-    , prevVelocity   = (0,0)
-    , prevAngularVel = 0
     }
 
 interpolate :: Float -> Body -> Body
 interpolate t body = body
-    { position = position body /+/ prevVelocity   body /* t
-    , angle    = angle    body  +  prevAngularVel body  * t
+    { position = position body /+/ velocity   body /* t
+    , angle    = angle    body  +  angularVel body  * t
     }
 
 physicalBody :: Body -> Coroutine BodyForces Body
@@ -55,7 +49,7 @@ physicalBody initial = proc (accel, setAngVel) -> do
 
     (prevVel,prevAve) <- delay (velocity &&& angularVel $ initial) -< (vel, ave)
 
-    returnA -< Body pos vel ang ave fric prevVel prevAve
+    returnA -< Body pos prevVel ang prevAve fric
 
     where
         fric = friction initial

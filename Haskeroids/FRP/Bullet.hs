@@ -31,8 +31,6 @@ bulletFrom rng body = Bullet $ defaultBody
     { position = position body /+/ lead
     , velocity = vel
     , angle    = ang
-
-    , prevVelocity = vel
     } where
         ang  = angle body
         vel  = polar bulletSpeed ang

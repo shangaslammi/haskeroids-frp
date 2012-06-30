@@ -95,9 +95,6 @@ newAsteroid sz pos v r = Asteroid body sz where
         , angle      = 0
         , velocity   = v
         , angularVel = r
-
-        , prevVelocity   = v
-        , prevAngularVel = r
         }
 
 randomAsteroid :: Size -> Vec2 -> RandomAsteroid
