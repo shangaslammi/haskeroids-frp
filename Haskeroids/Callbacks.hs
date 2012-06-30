@@ -5,6 +5,7 @@ module Haskeroids.Callbacks
     ) where
 
 import Control.Coroutine
+import Control.Monad
 
 import Data.IORef
 import Data.Time.Clock.POSIX
@@ -66,10 +67,9 @@ renderViewport (ar, pr, kb, sr) = do
 
     let interpolation = realToFrac $ accum' / secPerFrame
     render (fst s') interpolation
-    -- renderInterpolated interpolation s'
 
     swapBuffers
-    postRedisplay Nothing
+
 
 -- | Update the Keyboard state according to the event
 handleKeyboard :: CallbackRefs -> KeyboardMouseCallback
