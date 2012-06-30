@@ -1,13 +1,13 @@
 module Haskeroids.Controls
-    ( turnRight
-    , turnLeft
-    , thrust
-    , shoot
+    ( keyTurnRight
+    , keyTurnLeft
+    , keyThruster
+    , keyShoot
     ) where
 
 import Graphics.UI.GLUT (Key(..), SpecialKey(..))
 
-turnRight = SpecialKey KeyRight
-turnLeft  = SpecialKey KeyLeft
-thrust    = SpecialKey KeyUp
-shoot     = Char ' '
+keyTurnRight = SpecialKey KeyRight
+keyTurnLeft  = SpecialKey KeyLeft
+keyThruster  = SpecialKey KeyUp
+keyShoot     = Char ' '

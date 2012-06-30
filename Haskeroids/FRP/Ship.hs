@@ -13,7 +13,7 @@ import Haskeroids.FRP.Draw
 import Haskeroids.FRP.Collisions
 import Haskeroids.Geometry
 import Haskeroids.Keyboard
-import qualified Haskeroids.Controls as Ctrl
+import Haskeroids.Controls
 
 newtype Ship = Ship { shipBody :: Body }
 
@@ -41,12 +41,13 @@ type Thrust = Body
 playerShip :: Coroutine (Keyboard, Event collision) (Maybe Ship, Event Bullet, Event Thrust)
 playerShip = switchWith playerDead $ proc kb -> do
     let thrust
-            | isKeyDown kb Ctrl.thrust = engineThrust
+            | keyDown keyThruster = engineThrust
             | otherwise                = 0
         turn
-            | isKeyDown kb Ctrl.turnLeft  = [-turnRate]
-            | isKeyDown kb Ctrl.turnRight = [turnRate]
+            | keyDown keyTurnLeft  = [-turnRate]
+            | keyDown keyTurnRight = [turnRate]
             | otherwise                   = [0]
+        keyDown = isKeyDown kb
 
     rec let acceleration = polar thrust (angle body)
         body <- shipBody <<< delay ((0,0),[]) -< (acceleration, turn)
@@ -63,7 +64,7 @@ playerShip = switchWith playerDead $ proc kb -> do
 
 shipGun :: Coroutine (Keyboard, Body) (Event Bullet)
 shipGun = proc (kb, body) -> do
-    rec let fireButton = isKeyDown kb Ctrl.shoot
+    rec let fireButton = isKeyDown kb keyShoot
             canFire    = recharge <= 0
             bulletEv
                 | fireButton && canFire = [bulletFrom shipSize body]
