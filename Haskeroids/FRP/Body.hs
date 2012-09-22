@@ -21,8 +21,6 @@ type AngularVelocity = Float
 type Angle           = Float
 type Friction        = Float
 
-type BodyForces = (Acceleration, Event AngularVelocity)
-
 class HasBody b where
     body :: b -> Body
 
@@ -40,7 +38,7 @@ interpolate t body = body
     , angle    = angle    body  +  angularVel body  * t
     }
 
-physicalBody :: Body -> Coroutine BodyForces Body
+physicalBody :: Body -> Coroutine (Acceleration, Event AngularVelocity) Body
 physicalBody initial = proc (accel, setAngVel) -> do
     vel <- updateC (velocity initial) -< \v -> (v /+/ accel) /* fric
     pos <- updateC (position initial) -< \p -> wrapAround (p /+/ vel)
