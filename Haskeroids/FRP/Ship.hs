@@ -38,30 +38,33 @@ fireRate     = 10
 
 type Thrust = Body
 
+
 playerShip :: Coroutine (Keyboard, Event collision) (Maybe Ship, Event Bullet, Event Thrust)
-playerShip = switchWith playerDead $ proc kb -> do
-    let thrust
-            | keyDown keyThruster = engineThrust
-            | otherwise                = 0
-        turn
-            | keyDown keyTurnLeft  = [-turnRate]
-            | keyDown keyTurnRight = [turnRate]
-            | otherwise                   = [0]
-        keyDown = isKeyDown kb
+playerShip = switchWith (const playerDead) playerAlive where
+    playerAlive = proc kb -> do
+        let keyDown = isKeyDown kb
+            thrust
+                | keyDown keyThruster = engineThrust
+                | otherwise           = 0
+            turn
+                | keyDown keyTurnLeft  = [-turnRate]
+                | keyDown keyTurnRight = [turnRate]
+                | otherwise            = [0]
 
-    rec let acceleration = polar thrust direction
-        body      <- shipBody               -< (acceleration, turn)
-        direction <- delay (angle initBody) -< angle body
+        rec let acceleration = polar thrust direction
+            body      <- shipBody               -< (acceleration, turn)
+            direction <- delay (angle initBody) -< angle body
 
-    bullets <- shipGun -< (kb, body)
+        bullets <- shipGun -< (kb, body)
 
-    let thrustEvent = if thrust > 0 then [body] else []
+        let thrustEvent = if thrust > 0 then [body] else []
 
-    returnA -< (Just (Ship body), bullets, thrustEvent)
+        returnA -< (Just (Ship body), bullets, thrustEvent)
 
-    where
-        shipBody   = physicalBody initBody
-        playerDead = const $ pure (Nothing, [], [])
+
+    shipBody   = physicalBody initBody
+    playerDead = pure (Nothing, [], [])
+
 
 shipGun :: Coroutine (Keyboard, Body) (Event Bullet)
 shipGun = proc (kb, body) -> do
