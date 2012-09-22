@@ -49,8 +49,9 @@ playerShip = switchWith playerDead $ proc kb -> do
             | otherwise                   = [0]
         keyDown = isKeyDown kb
 
-    rec let acceleration = polar thrust (angle body)
-        body <- shipBody <<< delay ((0,0),[]) -< (acceleration, turn)
+    rec let acceleration = polar thrust direction
+        body      <- shipBody               -< (acceleration, turn)
+        direction <- delay (angle initBody) -< angle body
 
     bullets <- shipGun -< (kb, body)
 
